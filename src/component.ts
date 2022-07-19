@@ -11,26 +11,25 @@ import { ChangeItem, ChangeListener, MigrationChange } from "./migration";
 import { Renderer } from "./renderer";
 import {
   GraphQLBatchMigrationCreateEnumerableFieldInput,
-  GraphQLBatchMigrationCreateModelInput,
+  GraphQLBatchMigrationCreateComponentInput,
   GraphQLBatchMigrationCreateRelationalFieldInput,
   GraphQLBatchMigrationCreateRemoteFieldInput,
   GraphQLBatchMigrationCreateReverseRelationalFieldInput,
-  GraphQLBatchMigrationCreateReverseUnionFieldInput,
   GraphQLBatchMigrationCreateSimpleFieldInput,
-  GraphQLBatchMigrationCreateUnionFieldInput,
+  GraphQLBatchMigrationCreateComponentUnionFieldInput,
   GraphQLBatchMigrationUpdateEnumerableFieldInput,
-  GraphQLBatchMigrationUpdateModelInput,
+  GraphQLBatchMigrationUpdateComponentInput,
   GraphQLBatchMigrationUpdateRelationalFieldInput,
   GraphQLBatchMigrationUpdateRemoteFieldInput,
   GraphQLBatchMigrationUpdateSimpleFieldInput,
-  GraphQLBatchMigrationUpdateUnionFieldInput,
+  GraphQLBatchMigrationUpdateComponentUnionFieldInput,
   GraphQLRelationalFieldType,
   GraphQLSimpleFieldType,
 } from "./generated/schema";
 
-type ModelArgs =
-  | GraphQLBatchMigrationCreateModelInput
-  | GraphQLBatchMigrationUpdateModelInput;
+type ComponentArgs =
+  | GraphQLBatchMigrationCreateComponentInput
+  | GraphQLBatchMigrationUpdateComponentInput;
 
 /**
  * Relational Fields
@@ -61,33 +60,17 @@ interface RelationalFieldArgs
  * Create Union Field
  */
 interface CreateUnionFieldArgs
-  extends Omit<
-    GraphQLBatchMigrationCreateUnionFieldInput,
-    "reverseField" | "isHidden"
-  > {
+  extends GraphQLBatchMigrationCreateComponentUnionFieldInput {
   relationType: RelationType;
-  models: string[];
-  /**
-   * @deprecated Use visibility instead.
-   */
-  isHidden: GraphQLBatchMigrationCreateRelationalFieldInput["isHidden"];
-  reverseField?: Omit<
-    GraphQLBatchMigrationCreateReverseUnionFieldInput,
-    "modelApiIds" | "isList" | "isHidden"
-  > & {
-    /**
-     * @deprecated Use visibility instead.
-     */
-    isHidden?: GraphQLBatchMigrationCreateReverseUnionFieldInput["isHidden"];
-  };
+  components: string[];
 }
 
 /**
  * Update Union Field
  */
 interface UpdateUnionFieldArgs
-  extends Omit<GraphQLBatchMigrationUpdateUnionFieldInput, "reverseField"> {
-  models?: string[];
+  extends GraphQLBatchMigrationUpdateComponentUnionFieldInput {
+  components?: string[];
 }
 
 interface UpdateSimpleFieldArgs
@@ -142,20 +125,20 @@ interface UpdateRemoteFieldArgs
   extends Omit<GraphQLBatchMigrationUpdateRemoteFieldInput, "parentApiId"> {}
 
 /**
- * GraphCMS Model
+ * GraphCMS Component
  */
-interface Model {
+interface Component {
   /**
    * Add a new field to the model.
    * @param field options for the field.
    */
-  addSimpleField(field: CreateSimpleFieldArgs): Model;
+  addSimpleField(field: CreateSimpleFieldArgs): Component;
 
   /**
    * Update an existing field
    * @param field options for the field.
    */
-  updateSimpleField(field: UpdateSimpleFieldArgs): Model;
+  updateSimpleField(field: UpdateSimpleFieldArgs): Component;
 
   /**
    * Add a relational field
@@ -166,50 +149,48 @@ interface Model {
       PartialBy<RelationalFieldArgs, "reverseField" | "type">,
       "modelApiId"
     >
-  ): Model;
+  ): Component;
 
   /**
    * Update a relational field
    * @param field options for the relational field.
    */
-  updateRelationalField(field: UpdateRelationalFieldArgs): Model;
+  updateRelationalField(field: UpdateRelationalFieldArgs): Component;
 
   /**
    * Add a union field
    * @param field options for the union field.
    */
-  addUnionField(
-    field: Omit<PartialBy<CreateUnionFieldArgs, "reverseField">, "modelApiId">
-  ): Model;
+  addUnionField(field: Omit<CreateUnionFieldArgs, "parentApiId">): Component;
 
   /**
    * Update a union field.
    * @param field options for the union field.
    */
-  updateUnionField(field: Omit<UpdateUnionFieldArgs, "modelApiId">): Model;
+  updateUnionField(field: Omit<UpdateUnionFieldArgs, "parentApiId">): Component;
 
   /**
    * Create an enumerable field.
    * @param field options for the enumerable field.
    */
-  addEnumerableField(field: CreateEnumerableFieldArgs): Model;
+  addEnumerableField(field: CreateEnumerableFieldArgs): Component;
 
   /**
    * Update an enumerable field
    * @param field options for the enumerable field.
    */
-  updateEnumerableField(field: UpdateEnumerableFieldArgs): Model;
+  updateEnumerableField(field: UpdateEnumerableFieldArgs): Component;
 
   /* Create an remote field.
    * @param field options for the remote field.
    */
-  addRemoteField(field: CreateRemoteFieldArgs): Model;
+  addRemoteField(field: CreateRemoteFieldArgs): Component;
 
   /**
    * Update a remote field
    * @param field options for the remote field.
    */
-  updateRemoteField(field: UpdateRemoteFieldArgs): Model;
+  updateRemoteField(field: UpdateRemoteFieldArgs): Component;
 
   /**
    * Delete a field
@@ -221,16 +202,16 @@ interface Model {
 /**
  * @ignore
  */
-class ModelClass implements Model, ChangeItem {
+class ComponentClass implements Component, ChangeItem {
   constructor(
     private listener: ChangeListener,
     private mode: MutationMode,
-    private args: ModelArgs
+    private args: ComponentArgs
   ) {}
 
-  addSimpleField(passedFieldArgs: any): Model {
+  addSimpleField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.modelApiId = this.args.apiId;
+    fieldArgs.parentApiId = this.args.apiId;
     if (fieldArgs.type === GraphQLSimpleFieldType.String) {
       fieldArgs.formRenderer = fieldArgs.formRenderer || Renderer.SingleLine;
     }
@@ -244,9 +225,9 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  updateSimpleField(passedFieldArgs: any): Model {
+  updateSimpleField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.modelApiId = this.args.apiId;
+    fieldArgs.parentApiId = this.args.apiId;
 
     if (fieldArgs.validations) {
       fieldArgs.validations = extractFieldValidations(fieldArgs);
@@ -258,9 +239,9 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  addRelationalField(passedFieldArgs: any): Model {
+  addRelationalField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.modelApiId = this.args.apiId;
+    fieldArgs.parentApiId = this.args.apiId;
 
     const fieldTypeUpper = fieldArgs.type?.toUpperCase();
     const fieldModelUpper = fieldArgs.model?.toUpperCase();
@@ -276,8 +257,8 @@ class ModelClass implements Model, ChangeItem {
 
     if (!fieldArgs.reverseField) {
       fieldArgs.reverseField = {
-        apiId: `related${fieldArgs.modelApiId}`,
-        displayName: `Related ${fieldArgs.modelApiId}`,
+        apiId: `related${fieldArgs.parentApiId}`,
+        displayName: `Related ${fieldArgs.parentApiId}`,
       };
     }
 
@@ -317,49 +298,13 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  addUnionField(passedFieldArgs: any): Model {
+  updateRelationalField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.modelApiId = this.args.apiId;
-    if (!fieldArgs.models || fieldArgs.models.length === 0) {
-      throw new Error(`models cannot be empty`);
-    }
-
-    if (!fieldArgs.reverseField) {
-      fieldArgs.reverseField = {
-        apiId: `related${fieldArgs.modelApiId}`,
-        displayName: `Related ${fieldArgs.modelApiId}`,
-      };
-    }
-    fieldArgs.reverseField.modelApiIds = fieldArgs.models;
-
-    fieldArgs.isList =
-      fieldArgs.relationType === RelationType.OneToMany ||
-      fieldArgs.relationType === RelationType.ManyToMany;
-    fieldArgs.reverseField.isList =
-      fieldArgs.relationType === RelationType.ManyToOne ||
-      fieldArgs.relationType === RelationType.ManyToMany;
-
-    // remove convenience fields
-    delete fieldArgs.models;
-    delete fieldArgs.relationType;
-
-    const field = new Field(
-      fieldArgs,
-      MutationMode.Create,
-      FieldType.UnionField
-    );
-    this.listener.registerChange(field);
-    return this;
-  }
-
-  updateRelationalField(passedFieldArgs: any): Model {
-    const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.modelApiId = this.args.apiId;
+    fieldArgs.parentApiId = this.args.apiId;
     fieldArgs.reverseField = passedFieldArgs?.reverseField;
 
     if (
-      fieldArgs.modelApiId?.toUpperCase() ===
-        GraphQLRelationalFieldType.Asset &&
+      fieldArgs.type?.toUpperCase() === GraphQLRelationalFieldType.Asset &&
       fieldArgs.isRequired !== undefined
     ) {
       fieldArgs.isRequired = Boolean(fieldArgs.isRequired);
@@ -374,16 +319,35 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  updateUnionField(passedFieldArgs: any): Model {
+  addUnionField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.modelApiId = this.args.apiId;
-    fieldArgs.reverseField = {
-      ...passedFieldArgs?.reverseField,
-      modelApiIds: fieldArgs.models,
-    };
+    fieldArgs.parentApiId = this.args.apiId;
+    if (!fieldArgs.components || fieldArgs.components.length === 0) {
+      throw new Error(`components cannot be empty`);
+    }
+
+    fieldArgs.isList =
+      fieldArgs.relationType === RelationType.OneToMany ||
+      fieldArgs.relationType === RelationType.ManyToMany;
+
+    // remove convenience fields
+    delete fieldArgs.relationType;
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Create,
+      FieldType.UnionField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  updateUnionField(passedFieldArgs: any): Component {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
 
     // remove convenience field
-    delete fieldArgs.models;
+    delete fieldArgs.components;
 
     const field = new Field(
       fieldArgs,
@@ -395,12 +359,12 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  addEnumerableField(passedFieldArgs: any): Model {
+  addEnumerableField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
     if (!fieldArgs.enumerationApiId) {
       throw new Error("enumerationApiId is required for enumerable field");
     }
-    fieldArgs.modelApiId = this.args.apiId;
+    fieldArgs.parentApiId = this.args.apiId;
     const field = new Field(
       fieldArgs,
       MutationMode.Create,
@@ -410,9 +374,9 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  updateEnumerableField(passedFieldArgs: any): Model {
+  updateEnumerableField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.modelApiId = this.args.apiId;
+    fieldArgs.parentApiId = this.args.apiId;
 
     const field = new Field(
       fieldArgs,
@@ -423,7 +387,7 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  addRemoteField(passedFieldArgs: any): Model {
+  addRemoteField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
     fieldArgs.parentApiId = this.args.apiId;
 
@@ -436,7 +400,7 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  updateRemoteField(passedFieldArgs: any): Model {
+  updateRemoteField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
     fieldArgs.parentApiId = this.args.apiId;
 
@@ -449,9 +413,9 @@ class ModelClass implements Model, ChangeItem {
     return this;
   }
 
-  deleteField(apiId: string): Model {
+  deleteField(apiId: string): Component {
     const field = new Field(
-      { apiId, modelApiId: this.args.apiId },
+      { apiId, parentApiId: this.args.apiId },
       MutationMode.Delete
     );
     this.listener.registerChange(field);
@@ -471,13 +435,13 @@ class ModelClass implements Model, ChangeItem {
     let action: string;
     switch (this.mode) {
       case MutationMode.Create:
-        action = "createModel";
+        action = "createComponent";
         break;
       case MutationMode.Update:
-        action = "updateModel";
+        action = "updateComponent";
         break;
       case MutationMode.Delete:
-        action = "deleteModel";
+        action = "deleteComponent";
         break;
     }
 
@@ -487,4 +451,4 @@ class ModelClass implements Model, ChangeItem {
   }
 }
 
-export { Model, ModelClass };
+export { Component, ComponentClass };
