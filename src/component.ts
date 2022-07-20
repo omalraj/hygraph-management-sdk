@@ -13,16 +13,14 @@ import {
   GraphQLBatchMigrationCreateEnumerableFieldInput,
   GraphQLBatchMigrationCreateComponentInput,
   GraphQLBatchMigrationCreateRelationalFieldInput,
-  GraphQLBatchMigrationCreateRemoteFieldInput,
   GraphQLBatchMigrationCreateReverseRelationalFieldInput,
   GraphQLBatchMigrationCreateSimpleFieldInput,
-  GraphQLBatchMigrationCreateComponentUnionFieldInput,
+  GraphQLBatchMigrationCreateUnionFieldInput,
   GraphQLBatchMigrationUpdateEnumerableFieldInput,
   GraphQLBatchMigrationUpdateComponentInput,
   GraphQLBatchMigrationUpdateRelationalFieldInput,
-  GraphQLBatchMigrationUpdateRemoteFieldInput,
   GraphQLBatchMigrationUpdateSimpleFieldInput,
-  GraphQLBatchMigrationUpdateComponentUnionFieldInput,
+  GraphQLBatchMigrationUpdateUnionFieldInput,
   GraphQLRelationalFieldType,
   GraphQLSimpleFieldType,
 } from "./generated/schema";
@@ -60,17 +58,17 @@ interface RelationalFieldArgs
  * Create Union Field
  */
 interface CreateUnionFieldArgs
-  extends GraphQLBatchMigrationCreateComponentUnionFieldInput {
+  extends GraphQLBatchMigrationCreateUnionFieldInput {
   relationType: RelationType;
-  components: string[];
+  models: string[];
 }
 
 /**
  * Update Union Field
  */
 interface UpdateUnionFieldArgs
-  extends GraphQLBatchMigrationUpdateComponentUnionFieldInput {
-  components?: string[];
+  extends GraphQLBatchMigrationUpdateUnionFieldInput {
+  models?: string[];
 }
 
 interface UpdateSimpleFieldArgs
@@ -117,12 +115,6 @@ interface UpdateEnumerableFieldArgs
    */
   isHidden?: GraphQLBatchMigrationUpdateEnumerableFieldInput["isHidden"];
 }
-
-interface CreateRemoteFieldArgs
-  extends Omit<GraphQLBatchMigrationCreateRemoteFieldInput, "parentApiId"> {}
-
-interface UpdateRemoteFieldArgs
-  extends Omit<GraphQLBatchMigrationUpdateRemoteFieldInput, "parentApiId"> {}
 
 /**
  * GraphCMS Component
@@ -180,17 +172,6 @@ interface Component {
    * @param field options for the enumerable field.
    */
   updateEnumerableField(field: UpdateEnumerableFieldArgs): Component;
-
-  /* Create an remote field.
-   * @param field options for the remote field.
-   */
-  addRemoteField(field: CreateRemoteFieldArgs): Component;
-
-  /**
-   * Update a remote field
-   * @param field options for the remote field.
-   */
-  updateRemoteField(field: UpdateRemoteFieldArgs): Component;
 
   /**
    * Delete a field
@@ -322,15 +303,27 @@ class ComponentClass implements Component, ChangeItem {
   addUnionField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
     fieldArgs.parentApiId = this.args.apiId;
-    if (!fieldArgs.components || fieldArgs.components.length === 0) {
-      throw new Error(`components cannot be empty`);
+    if (!fieldArgs.models || fieldArgs.models.length === 0) {
+      throw new Error(`models cannot be empty`);
     }
+
+    if (!fieldArgs.reverseField) {
+      fieldArgs.reverseField = {
+        apiId: `related${fieldArgs.modelApiId}`,
+        displayName: `Related ${fieldArgs.modelApiId}`,
+      };
+    }
+    fieldArgs.reverseField.modelApiIds = fieldArgs.models;
 
     fieldArgs.isList =
       fieldArgs.relationType === RelationType.OneToMany ||
       fieldArgs.relationType === RelationType.ManyToMany;
+    fieldArgs.reverseField.isList =
+      fieldArgs.relationType === RelationType.ManyToOne ||
+      fieldArgs.relationType === RelationType.ManyToMany;
 
     // remove convenience fields
+    delete fieldArgs.models;
     delete fieldArgs.relationType;
 
     const field = new Field(
@@ -345,9 +338,13 @@ class ComponentClass implements Component, ChangeItem {
   updateUnionField(passedFieldArgs: any): Component {
     const fieldArgs = { ...passedFieldArgs };
     fieldArgs.parentApiId = this.args.apiId;
+    fieldArgs.reverseField = {
+      ...passedFieldArgs?.reverseField,
+      modelApiIds: fieldArgs.models,
+    };
 
     // remove convenience field
-    delete fieldArgs.components;
+    delete fieldArgs.models;
 
     const field = new Field(
       fieldArgs,
@@ -382,32 +379,6 @@ class ComponentClass implements Component, ChangeItem {
       fieldArgs,
       MutationMode.Update,
       FieldType.EnumerableField
-    );
-    this.listener.registerChange(field);
-    return this;
-  }
-
-  addRemoteField(passedFieldArgs: any): Component {
-    const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.parentApiId = this.args.apiId;
-
-    const field = new Field(
-      fieldArgs,
-      MutationMode.Create,
-      FieldType.RemoteField
-    );
-    this.listener.registerChange(field);
-    return this;
-  }
-
-  updateRemoteField(passedFieldArgs: any): Component {
-    const fieldArgs = { ...passedFieldArgs };
-    fieldArgs.parentApiId = this.args.apiId;
-
-    const field = new Field(
-      fieldArgs,
-      MutationMode.Update,
-      FieldType.RemoteField
     );
     this.listener.registerChange(field);
     return this;
