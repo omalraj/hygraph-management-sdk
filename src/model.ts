@@ -24,6 +24,10 @@ import {
   GraphQLBatchMigrationUpdateRemoteFieldInput,
   GraphQLBatchMigrationUpdateSimpleFieldInput,
   GraphQLBatchMigrationUpdateUnionFieldInput,
+  GraphQLBatchMigrationCreateComponentFieldInput,
+  GraphQLBatchMigrationUpdateComponentFieldInput,
+  GraphQLBatchMigrationCreateComponentUnionFieldInput,
+  GraphQLBatchMigrationUpdateComponentUnionFieldInput,
   GraphQLRelationalFieldType,
   GraphQLSimpleFieldType,
 } from "./generated/schema";
@@ -141,6 +145,24 @@ interface CreateRemoteFieldArgs
 interface UpdateRemoteFieldArgs
   extends Omit<GraphQLBatchMigrationUpdateRemoteFieldInput, "parentApiId"> {}
 
+interface CreateComponentFieldArgs
+  extends Omit<GraphQLBatchMigrationCreateComponentFieldInput, "parentApiId"> {}
+
+interface UpdateComponentFieldArgs
+  extends Omit<GraphQLBatchMigrationUpdateComponentFieldInput, "parentApiId"> {}
+
+interface CreateComponentUnionFieldArgs
+  extends Omit<
+    GraphQLBatchMigrationCreateComponentUnionFieldInput,
+    "parentApiId"
+  > {}
+
+interface UpdateComponentUnionFieldArgs
+  extends Omit<
+    GraphQLBatchMigrationUpdateComponentUnionFieldInput,
+    "parentApiId"
+  > {}
+
 /**
  * GraphCMS Model
  */
@@ -210,6 +232,28 @@ interface Model {
    * @param field options for the remote field.
    */
   updateRemoteField(field: UpdateRemoteFieldArgs): Model;
+
+  /* Create a component field.
+   * @param field options for the component field.
+   */
+  addComponentField(field: CreateComponentFieldArgs): Model;
+
+  /**
+   * Update a component field
+   * @param field options for the component field.
+   */
+  updateComponentField(field: UpdateComponentFieldArgs): Model;
+
+  /* Create a component union field.
+   * @param field options for the component union field.
+   */
+  addComponentUnionField(field: CreateComponentUnionFieldArgs): Model;
+
+  /**
+   * Update a component union field
+   * @param field options for the component union field.
+   */
+  updateComponentUnionField(field: UpdateComponentUnionFieldArgs): Model;
 
   /**
    * Delete a field
@@ -444,6 +488,64 @@ class ModelClass implements Model, ChangeItem {
       fieldArgs,
       MutationMode.Update,
       FieldType.RemoteField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  addComponentField(passedFieldArgs: any): Model {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
+    if (!fieldArgs.componentApiId) {
+      throw new Error(`component cannot be empty`);
+    }
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Create,
+      FieldType.ComponentField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  updateComponentField(passedFieldArgs: any): Model {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Update,
+      FieldType.ComponentField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  addComponentUnionField(passedFieldArgs: any): Model {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
+    if (!fieldArgs.componentApiIds || fieldArgs.componentApiIds.length === 0) {
+      throw new Error(`components cannot be empty`);
+    }
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Create,
+      FieldType.ComponentUnionField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  updateComponentUnionField(passedFieldArgs: any): Model {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Update,
+      FieldType.ComponentUnionField
     );
     this.listener.registerChange(field);
     return this;
