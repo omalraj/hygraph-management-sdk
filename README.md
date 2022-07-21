@@ -374,6 +374,26 @@ model.addUnionField({
 });
 ```
 
+To create a component field.
+
+```js
+model.addComponentField({
+  apiId,
+  displayName,
+  componentApiId,
+});
+```
+
+To create a component union field.
+
+```js
+model.addComponentUnionField({
+  apiId,
+  displayName,
+  componentApiIds, // Array of componentApiIds
+});
+```
+
 #### Update a Field
 
 To update a field, firstly retrieve the model.
@@ -420,12 +440,251 @@ model.updateUnionField({
 })
 ```
 
+Updating component field
+
+```js
+model.updateComponentField({
+  apiId,
+  ... // properties to update
+})
+```
+
+Updating component union field
+
+```js
+model.updateComponentUnionField({
+  apiId,
+  ... // properties to update
+})
+```
+
 #### Deleting a Field
 
 To delete a field
 
 ```js
 model.deleteField(apiId);
+```
+
+### Create a Component
+
+A component can be created by passing in the required parameters.
+
+```js
+const component = migration.createComponent({
+  apiId, // must start with upper case letter
+  apiIdPlural, // must start with upper case letter
+  displayName,
+  description,
+});
+```
+
+### Update a Component
+
+To update a component
+
+```js
+migration.updateComponent({
+  apiId, // required
+  ... // properties to update
+});
+```
+
+### Delete a Component
+
+To delete a component
+
+```js
+migration.deleteComponent(apiId);
+```
+
+### Fields
+
+Your schema is built up of GraphQL types. If you’re familiar working with GraphQL, you should feel right at home. GraphCMS supports all of the common GraphQL types you are used to, as well as some of its own.
+
+#### Create a Field
+
+To create a simple field.
+
+```js
+const { FieldType } = require("@graphcms/management");
+
+component.addSimpleField({
+  apiId: '...',
+  displayName: '...',
+  type: FieldType.String,
+});
+```
+
+String fields have several [form renderers](/src/renderer.ts#L4-L10), including single line, multiline, markdown, and slug. You can set the form renderer as follows:
+
+```js
+const { FieldType, Renderer } = require("@graphcms/management");
+
+component.addSimpleField({
+  apiId: '...',
+  displayName: '...',
+  type: FieldType.String,
+  formRenderer: Renderer.MultiLine
+});
+```
+
+To create an enumerable field.
+
+```js
+component.addEnumerableField({
+  apiId,
+  displayName,
+  enumerationApiId, // previously created enumeration.
+});
+```
+
+To create a relational field.
+
+>Two way references are not allowed within a component
+
+```js
+const { RelationType } = require("@graphcms/management");
+
+component.addRelationalField({
+  apiId,
+  displayName,
+  relationType: RelationType.OneToOne,
+  model, // the related model
+
+  // optional but can be specified to customize the details.
+  reverseField: {
+    apiId,
+    displayName,
+  },
+});
+```
+
+To create an asset field.
+
+```js
+component.addRelationalField({
+  apiId,
+  displayName,
+  model: "Asset", // this is compulsory to indicate Asset field.
+
+  // optional but can be specified to customize the details.
+  reverseField: {
+    apiId,
+    displayName,
+  },
+});
+```
+
+To create a union field.
+
+```js
+const { RelationType } = require("@graphcms/management");
+
+component.addUnionField({
+  apiId,
+  displayName,
+  relationType: RelationType.OneToOne,
+  models, // list of related models
+
+  // optional but can be specified to customize the details.
+  reverseField: {
+    apiId,
+    displayName,
+  },
+});
+```
+
+To create a component field.
+
+```js
+component.addComponentField({
+  apiId,
+  displayName,
+  componentApiId,
+});
+```
+
+To create a component union field.
+
+```js
+component.addComponentUnionField({
+  apiId,
+  displayName,
+  componentApiIds, // Array of componentApiIds
+});
+```
+
+#### Update a Field
+
+To update a field, firstly retrieve the model.
+
+```js
+const component = migration.updateComponent({...}) // to update the model
+const component = migration.component(apiId) // to only retrieve the model
+```
+
+Updating simple field
+
+```js
+component.updateSimpleField({
+  apiId,
+  ... // properties to update
+})
+```
+
+Updating enumerable field
+
+```js
+component.updateEnumerableField({
+  apiId,
+  ... // properties to update
+})
+```
+
+Updating relational field
+
+```js
+component.updateRelationalField({
+  apiId,
+  ... // properties to update
+})
+```
+
+Updating union field
+
+```js
+component.updateUnionField({
+  apiId,
+  models, // list of related models
+  ... // properties to update
+})
+```
+
+Updating component field
+
+```js
+component.updateComponentField({
+  apiId,
+  ... // properties to update
+})
+```
+
+Updating component union field
+
+```js
+component.updateComponentUnionField({
+  apiId,
+  ... // properties to update
+})
+```
+
+#### Deleting a Field
+
+To delete a field
+
+```js
+component.deleteField(apiId);
 ```
 
 ## Contributors

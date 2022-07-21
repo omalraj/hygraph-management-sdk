@@ -21,9 +21,30 @@ import {
   GraphQLBatchMigrationUpdateRelationalFieldInput,
   GraphQLBatchMigrationUpdateSimpleFieldInput,
   GraphQLBatchMigrationUpdateUnionFieldInput,
+  GraphQLBatchMigrationCreateComponentFieldInput,
+  GraphQLBatchMigrationUpdateComponentFieldInput,
+  GraphQLBatchMigrationCreateComponentUnionFieldInput,
+  GraphQLBatchMigrationUpdateComponentUnionFieldInput,
   GraphQLRelationalFieldType,
   GraphQLSimpleFieldType,
 } from "./generated/schema";
+
+//TODO: create an abstract baseComponent class for model and component to extend to minismise repetative code.
+/*
+abstract class BaseComponentClass<ClassType, ArgsType> implements ChangeItem {
+  constructor(listener: ChangeListener, mode: MutationMode, args: ArgsType) {}
+
+  abstract generateChange(): MigrationChange;
+
+  abstract addSimpleField(passedFieldArgs: any): ClassType { .. }
+
+  ....
+
+  extractFieldValidations(
+    fieldArgs: CreateSimpleFieldArgs
+  ): GraphQLSimpleFieldValidationsInput { .. }
+}
+*/
 
 type ComponentArgs =
   | GraphQLBatchMigrationCreateComponentInput
@@ -116,6 +137,24 @@ interface UpdateEnumerableFieldArgs
   isHidden?: GraphQLBatchMigrationUpdateEnumerableFieldInput["isHidden"];
 }
 
+interface CreateComponentFieldArgs
+  extends Omit<GraphQLBatchMigrationCreateComponentFieldInput, "parentApiId"> {}
+
+interface UpdateComponentFieldArgs
+  extends Omit<GraphQLBatchMigrationUpdateComponentFieldInput, "parentApiId"> {}
+
+interface CreateComponentUnionFieldArgs
+  extends Omit<
+    GraphQLBatchMigrationCreateComponentUnionFieldInput,
+    "parentApiId"
+  > {}
+
+interface UpdateComponentUnionFieldArgs
+  extends Omit<
+    GraphQLBatchMigrationUpdateComponentUnionFieldInput,
+    "parentApiId"
+  > {}
+
 /**
  * GraphCMS Component
  */
@@ -172,6 +211,30 @@ interface Component {
    * @param field options for the enumerable field.
    */
   updateEnumerableField(field: UpdateEnumerableFieldArgs): Component;
+
+  /**
+   * Create a component field.
+   * @param field options for the component field.
+   */
+  addComponentField(field: CreateComponentFieldArgs): Component;
+
+  /**
+   * Update a component field
+   * @param field options for the component field.
+   */
+  updateComponentField(field: UpdateComponentFieldArgs): Component;
+
+  /**
+   * Create a component union field.
+   * @param field options for the component union field.
+   */
+  addComponentUnionField(field: CreateComponentUnionFieldArgs): Component;
+
+  /**
+   * Update a component union field
+   * @param field options for the component union field.
+   */
+  updateComponentUnionField(field: UpdateComponentUnionFieldArgs): Component;
 
   /**
    * Delete a field
@@ -245,12 +308,10 @@ class ComponentClass implements Component, ChangeItem {
 
     fieldArgs.reverseField.modelApiId = fieldArgs.model;
 
-    fieldArgs.isList =
-      fieldArgs.relationType === RelationType.OneToMany ||
-      fieldArgs.relationType === RelationType.ManyToMany;
-    fieldArgs.reverseField.isList =
-      fieldArgs.relationType === RelationType.ManyToOne ||
-      fieldArgs.relationType === RelationType.ManyToMany;
+    fieldArgs.isList = fieldArgs.relationType === RelationType.OneToMany;
+
+    // Two way references are not allowed within a component
+    fieldArgs.reverseField.isList = false;
 
     if (fieldArgs.type === GraphQLRelationalFieldType.Asset) {
       // Asset needs the isRequired field
@@ -309,18 +370,16 @@ class ComponentClass implements Component, ChangeItem {
 
     if (!fieldArgs.reverseField) {
       fieldArgs.reverseField = {
-        apiId: `related${fieldArgs.modelApiId}`,
-        displayName: `Related ${fieldArgs.modelApiId}`,
+        apiId: `related${fieldArgs.parentApiId}`,
+        displayName: `Related ${fieldArgs.parentApiId}`,
       };
     }
     fieldArgs.reverseField.modelApiIds = fieldArgs.models;
 
-    fieldArgs.isList =
-      fieldArgs.relationType === RelationType.OneToMany ||
-      fieldArgs.relationType === RelationType.ManyToMany;
-    fieldArgs.reverseField.isList =
-      fieldArgs.relationType === RelationType.ManyToOne ||
-      fieldArgs.relationType === RelationType.ManyToMany;
+    fieldArgs.isList = fieldArgs.relationType === RelationType.OneToMany;
+
+    // Two way references are not allowed within a component
+    fieldArgs.reverseField.isList = false;
 
     // remove convenience fields
     delete fieldArgs.models;
@@ -379,6 +438,64 @@ class ComponentClass implements Component, ChangeItem {
       fieldArgs,
       MutationMode.Update,
       FieldType.EnumerableField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  addComponentField(passedFieldArgs: any): Component {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
+    if (!fieldArgs.componentApiId) {
+      throw new Error(`component cannot be empty`);
+    }
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Create,
+      FieldType.ComponentField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  updateComponentField(passedFieldArgs: any): Component {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Update,
+      FieldType.ComponentField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  addComponentUnionField(passedFieldArgs: any): Component {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
+    if (!fieldArgs.componentApiIds || fieldArgs.componentApiIds.length === 0) {
+      throw new Error(`components cannot be empty`);
+    }
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Create,
+      FieldType.ComponentUnionField
+    );
+    this.listener.registerChange(field);
+    return this;
+  }
+
+  updateComponentUnionField(passedFieldArgs: any): Component {
+    const fieldArgs = { ...passedFieldArgs };
+    fieldArgs.parentApiId = this.args.apiId;
+
+    const field = new Field(
+      fieldArgs,
+      MutationMode.Update,
+      FieldType.ComponentUnionField
     );
     this.listener.registerChange(field);
     return this;
