@@ -215,7 +215,7 @@ export type GraphQLCreateContentViewInput = {
 
 export type GraphQLUpdateContentViewInput = {
   id: Scalars["ID"];
-  name: Scalars["String"];
+  name?: Maybe<Scalars["String"]>;
   description?: Maybe<Scalars["String"]>;
   columns: Array<GraphQLContentViewColumnInput>;
   orderBy?: Maybe<GraphQLOrderByInput>;
@@ -244,12 +244,14 @@ export type GraphQLInvite = {
   project: GraphQLProject;
   acceptedAt?: Maybe<Scalars["DateTime"]>;
   roles: Array<GraphQLRole>;
+  origin?: Maybe<Scalars["String"]>;
 };
 
 export type GraphQLSendInviteInput = {
   email: Scalars["String"];
   projectId: Scalars["ID"];
   roleIds: Array<Scalars["ID"]>;
+  origin?: Maybe<Scalars["String"]>;
 };
 
 export type GraphQLRevokeInviteInput = {
@@ -489,6 +491,7 @@ export enum GraphQLPermissionAction {
   /** View Permissions that need to be moved to a new concept eventually */
   ViewTeamMemberSettings = "VIEW_TEAM_MEMBER_SETTINGS",
   ViewRolePermissionSettings = "VIEW_ROLE_PERMISSION_SETTINGS",
+  ViewSchema = "VIEW_SCHEMA",
   /** Environments */
   EnvironmentCreate = "ENVIRONMENT_CREATE",
   EnvironmentRead = "ENVIRONMENT_READ",
@@ -591,10 +594,14 @@ export enum GraphQLPermissionAction {
   ExtensionRead = "EXTENSION_READ",
   ExtensionUpdate = "EXTENSION_UPDATE",
   ExtensionDelete = "EXTENSION_DELETE",
-  /** Sidebar elements */
-  SidebarElementCreate = "SIDEBAR_ELEMENT_CREATE",
-  SidebarElementUpdate = "SIDEBAR_ELEMENT_UPDATE",
-  SidebarElementDelete = "SIDEBAR_ELEMENT_DELETE",
+  /** App */
+  AppCreate = "APP_CREATE",
+  AppUpdate = "APP_UPDATE",
+  AppDelete = "APP_DELETE",
+  /** App Installation */
+  AppInstallationCreate = "APP_INSTALLATION_CREATE",
+  AppInstallationUpdate = "APP_INSTALLATION_UPDATE",
+  AppInstallationDelete = "APP_INSTALLATION_DELETE",
 }
 
 export type GraphQLPermanentAuthTokenDefaultsInput = {
@@ -901,6 +908,15 @@ export type GraphQL_SwitchOwnerInput = {
 
 export type GraphQL_SwitchOwnerPayload = {
   __typename?: "_SwitchOwnerPayload";
+  gcms?: Maybe<Scalars["String"]>;
+};
+
+export type GraphQL_ResetContentConfigInput = {
+  gcms?: Maybe<Scalars["String"]>;
+};
+
+export type GraphQL_ResetContentConfigPayload = {
+  __typename?: "_ResetContentConfigPayload";
   gcms?: Maybe<Scalars["String"]>;
 };
 
@@ -1707,6 +1723,8 @@ export type GraphQLEnvironment = {
   integration: GraphQLIIntegration;
   extensions: Array<GraphQLIExtension>;
   extension: GraphQLIExtension;
+  appInstallations: Array<GraphQLAppInstallation>;
+  appInstallation: GraphQLAppInstallation;
   diff: GraphQLDiffEnvironmentPayload;
 };
 
@@ -1737,6 +1755,14 @@ export type GraphQLEnvironmentIntegrationArgs = {
 
 export type GraphQLEnvironmentExtensionArgs = {
   id: Scalars["ID"];
+};
+
+export type GraphQLEnvironmentAppInstallationsArgs = {
+  status?: Maybe<GraphQLAppInstallationStatus>;
+};
+
+export type GraphQLEnvironmentAppInstallationArgs = {
+  appApiId: Scalars["String"];
 };
 
 export type GraphQLEnvironmentDiffArgs = {
@@ -1907,9 +1933,14 @@ export type GraphQLStage = {
 
 export type GraphQLProfile = {
   __typename?: "Profile";
+  id: Scalars["ID"];
   email: Scalars["String"];
   name: Scalars["String"];
   picture?: Maybe<Scalars["String"]>;
+  role?: Maybe<Scalars["String"]>;
+  purpose?: Maybe<Scalars["String"]>;
+  companyName?: Maybe<Scalars["String"]>;
+  companySize?: Maybe<Scalars["String"]>;
 };
 
 export type GraphQLIUser = {
@@ -2071,6 +2102,8 @@ export type GraphQLUserViewer = GraphQLIViewer & {
   projects: Array<GraphQLProject>;
   project?: Maybe<GraphQLProject>;
   commonAssetConfig: GraphQLCommonFilestack;
+  apps: Array<GraphQLApp>;
+  app: GraphQLApp;
 };
 
 export type GraphQLUserViewerPendingInviteArgs = {
@@ -2087,6 +2120,10 @@ export type GraphQLUserViewerPendingProjectArgs = {
 
 export type GraphQLUserViewerProjectArgs = {
   id?: Maybe<Scalars["ID"]>;
+};
+
+export type GraphQLUserViewerAppArgs = {
+  apiId: Scalars["String"];
 };
 
 export type GraphQLTokenViewer = GraphQLIViewer & {
@@ -2183,6 +2220,10 @@ export type GraphQLUpdateProfileInput = {
   jobTitle?: Maybe<Scalars["String"]>;
   jobRole?: Maybe<GraphQLProfileJobRole>;
   picture?: Maybe<Scalars["String"]>;
+  role?: Maybe<Scalars["String"]>;
+  purpose?: Maybe<Scalars["String"]>;
+  companyName?: Maybe<Scalars["String"]>;
+  companySize?: Maybe<Scalars["String"]>;
 };
 
 export enum GraphQLProfileJobRole {
@@ -2708,6 +2749,205 @@ export type GraphQLUpdateSidebarExtensionInput = {
 
 export type GraphQLDeleteExtensionInput = {
   extensionId: Scalars["ID"];
+};
+
+/** ### APP: */
+export enum GraphQLAppPublicationStatus {
+  Private = "PRIVATE",
+  Pending = "PENDING",
+  Public = "PUBLIC",
+}
+
+export type GraphQLApp = {
+  __typename?: "App";
+  id: Scalars["ID"];
+  author: Scalars["ID"];
+  name: Scalars["String"];
+  apiId: Scalars["String"];
+  setupUrl: Scalars["String"];
+  webhookUrl?: Maybe<Scalars["String"]>;
+  configurationUrl?: Maybe<Scalars["String"]>;
+  elements?: Maybe<Array<GraphQLIAppElement>>;
+  avatarUrl: Scalars["String"];
+  description: Scalars["String"];
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  publicationStatus: GraphQLAppPublicationStatus;
+};
+
+export enum GraphQLAppElementType {
+  Field = "field",
+  FormSidebar = "formSidebar",
+  Page = "page",
+}
+
+export type GraphQLIAppElement = {
+  id: Scalars["ID"];
+  name: Scalars["String"];
+  apiId: Scalars["String"];
+  type: GraphQLAppElementType;
+  description?: Maybe<Scalars["String"]>;
+  config?: Maybe<Scalars["JSON"]>;
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  src: Scalars["String"];
+  app: GraphQLApp;
+};
+
+export enum GraphQLFieldAppElementFeature {
+  FieldRenderer = "FieldRenderer",
+  ListRenderer = "ListRenderer",
+  TableRenderer = "TableRenderer",
+}
+
+export type GraphQLFieldAppElement = GraphQLIAppElement & {
+  __typename?: "FieldAppElement";
+  id: Scalars["ID"];
+  name: Scalars["String"];
+  apiId: Scalars["String"];
+  type: GraphQLAppElementType;
+  description?: Maybe<Scalars["String"]>;
+  config?: Maybe<Scalars["JSON"]>;
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  src: Scalars["String"];
+  /** --- */
+  features: Array<GraphQLFieldAppElementFeature>;
+  fieldType: GraphQLSimpleFieldType;
+  app: GraphQLApp;
+};
+
+export type GraphQLFormSidebarAppElement = GraphQLIAppElement & {
+  __typename?: "FormSidebarAppElement";
+  id: Scalars["ID"];
+  name: Scalars["String"];
+  apiId: Scalars["String"];
+  type: GraphQLAppElementType;
+  description?: Maybe<Scalars["String"]>;
+  config?: Maybe<Scalars["JSON"]>;
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  src: Scalars["String"];
+  app: GraphQLApp;
+};
+
+export type GraphQLPageAppElement = GraphQLIAppElement & {
+  __typename?: "PageAppElement";
+  id: Scalars["ID"];
+  name: Scalars["String"];
+  apiId: Scalars["String"];
+  type: GraphQLAppElementType;
+  description?: Maybe<Scalars["String"]>;
+  config?: Maybe<Scalars["JSON"]>;
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  src: Scalars["String"];
+  app: GraphQLApp;
+};
+
+export type GraphQLCreateAppInput = {
+  name: Scalars["String"];
+  apiId: Scalars["String"];
+  setupUrl: Scalars["String"];
+  avatarUrl: Scalars["String"];
+  description: Scalars["String"];
+  webhookUrl?: Maybe<Scalars["String"]>;
+  elements?: Maybe<Array<GraphQLAppElementInput>>;
+  configurationUrl?: Maybe<Scalars["String"]>;
+};
+
+export type GraphQLAppElementInput = {
+  id: Scalars["ID"];
+  apiId: Scalars["String"];
+  name: Scalars["String"];
+  type: GraphQLAppElementType;
+  description?: Maybe<Scalars["String"]>;
+  config?: Maybe<Scalars["JSON"]>;
+  src: Scalars["String"];
+  features?: Maybe<Array<GraphQLFieldAppElementFeature>>;
+  fieldType?: Maybe<GraphQLSimpleFieldType>;
+};
+
+export type GraphQLUpdateAppInput = {
+  apiId: Scalars["String"];
+  name?: Maybe<Scalars["String"]>;
+  setupUrl?: Maybe<Scalars["String"]>;
+  webhookUrl?: Maybe<Scalars["String"]>;
+  elements?: Maybe<Array<GraphQLAppElementInput>>;
+  avatarUrl?: Maybe<Scalars["String"]>;
+  description?: Maybe<Scalars["String"]>;
+  configurationUrl?: Maybe<Scalars["String"]>;
+};
+
+export type GraphQLDeleteAppInput = {
+  apiId: Scalars["String"];
+};
+
+export type GraphQLCreateAppPayload = {
+  __typename?: "CreateAppPayload";
+  createdApp: GraphQLApp;
+};
+
+export type GraphQLUpdateAppPayload = {
+  __typename?: "UpdateAppPayload";
+  updatedApp: GraphQLApp;
+};
+
+export type GraphQLDeleteAppPayload = {
+  __typename?: "DeleteAppPayload";
+  deletedAppId: Scalars["ID"];
+};
+
+export enum GraphQLAppInstallationStatus {
+  Pending = "PENDING",
+  Completed = "COMPLETED",
+  Disabled = "DISABLED",
+}
+
+export type GraphQLAppInstallation = {
+  __typename?: "AppInstallation";
+  id: Scalars["ID"];
+  environment: GraphQLEnvironment;
+  fields: Array<GraphQLIField>;
+  sidebarElements: Array<GraphQLAppSidebarElement>;
+  app: GraphQLApp;
+  config: Scalars["JSON"];
+  status: GraphQLAppInstallationStatus;
+  authToken: Scalars["String"];
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+};
+
+export type GraphQLCreateAppInstallationInput = {
+  environment: Scalars["ID"];
+  appApiId: Scalars["String"];
+  status?: Maybe<GraphQLAppInstallationStatus>;
+  config: Scalars["JSON"];
+};
+
+export type GraphQLUpdateAppInstallationInput = {
+  appInstallationId: Scalars["ID"];
+  config: Scalars["JSON"];
+  status?: Maybe<GraphQLAppInstallationStatus>;
+};
+
+export type GraphQLDeleteAppInstallationInput = {
+  appInstallationId: Scalars["ID"];
+};
+
+export type GraphQLCreateAppInstallationPayload = {
+  __typename?: "CreateAppInstallationPayload";
+  createdAppInstallation: GraphQLAppInstallation;
+};
+
+export type GraphQLUpdateAppInstallationPayload = {
+  __typename?: "UpdateAppInstallationPayload";
+  updatedAppInstallation: GraphQLAppInstallation;
+};
+
+export type GraphQLDeleteAppInstallationPayload = {
+  __typename?: "DeleteAppInstallationPayload";
+  deletedAppInstallationId: Scalars["ID"];
 };
 
 export type GraphQLEnumerationValue = {
@@ -3256,6 +3496,8 @@ export type GraphQLFieldConfig = {
   id: Scalars["String"];
   renderer: Scalars["String"];
   extension?: Maybe<GraphQLFieldExtension>;
+  appInstallation?: Maybe<GraphQLAppInstallation>;
+  appElement?: Maybe<GraphQLFieldAppElement>;
 };
 
 export type GraphQLMoveFieldPayload = {
@@ -3424,8 +3666,8 @@ export type GraphQLUpdateComponentUnionFieldInput = {
 export type GraphQLCreateMemberFieldInput = {
   /** ID of member model to add */
   modelId: Scalars["ID"];
-  apiId: Scalars["String"];
-  displayName: Scalars["String"];
+  apiId?: Maybe<Scalars["String"]>;
+  displayName?: Maybe<Scalars["String"]>;
   description?: Maybe<Scalars["String"]>;
   isHidden?: Maybe<Scalars["Boolean"]>;
   visibility?: Maybe<GraphQLVisibilityTypes>;
@@ -3463,6 +3705,8 @@ export type GraphQLFieldConfigInput = {
   renderer: Scalars["String"];
   config: Scalars["JSON"];
   extensionId?: Maybe<Scalars["ID"]>;
+  appInstallationId?: Maybe<Scalars["ID"]>;
+  appElementId?: Maybe<Scalars["ID"]>;
 };
 
 export type GraphQLFieldConfigUpdateInput = {
@@ -3764,7 +4008,7 @@ export type GraphQLCreateUnionFieldInput = {
   isList: Scalars["Boolean"];
   isHidden?: Maybe<Scalars["Boolean"]>;
   visibility?: Maybe<GraphQLVisibilityTypes>;
-  reverseSide: GraphQLCreateReverseField;
+  reverseSide?: Maybe<GraphQLCreateReverseField>;
   tableConfig?: Maybe<GraphQLFieldConfigInput>;
   formConfig?: Maybe<GraphQLFieldConfigInput>;
   extensions?: Maybe<Scalars["JSON"]>;
@@ -3838,10 +4082,12 @@ export type GraphQLUpdateSidebarElementPayload = {
 
 export type GraphQLCreateCustomSidebarElementInput = {
   modelId: Scalars["ID"];
-  extensionId: Scalars["ID"];
+  extensionId?: Maybe<Scalars["ID"]>;
   displayName: Scalars["String"];
   description?: Maybe<Scalars["String"]>;
   config?: Maybe<Scalars["JSON"]>;
+  appElementId?: Maybe<Scalars["ID"]>;
+  appInstallationId?: Maybe<Scalars["ID"]>;
 };
 
 export type GraphQLCreateSystemSidebarElementInput = {
@@ -3947,6 +4193,8 @@ export type GraphQLIModelContentViewsArgs = {
 
 export type GraphQLSidebarElements =
   | GraphQLSystemSidebarElement
+  | GraphQLAppSidebarElement
+  | GraphQLExtensionSidebarElement
   | GraphQLCustomSidebarElement;
 
 export type GraphQLISidebarElement = {
@@ -3959,6 +4207,20 @@ export type GraphQLISidebarElement = {
   position: Scalars["Int"];
   isEnabled: Scalars["Boolean"];
   model: GraphQLIModel;
+};
+
+export type GraphQLCustomSidebarElement = GraphQLISidebarElement & {
+  __typename?: "CustomSidebarElement";
+  id: Scalars["ID"];
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  displayName: Scalars["String"];
+  description?: Maybe<Scalars["String"]>;
+  config?: Maybe<Scalars["JSON"]>;
+  position: Scalars["Int"];
+  isEnabled: Scalars["Boolean"];
+  model: GraphQLIModel;
+  extension: GraphQLSidebarExtension;
 };
 
 export enum GraphQLSystemSidebarElementType {
@@ -3984,8 +4246,8 @@ export type GraphQLSystemSidebarElement = GraphQLISidebarElement & {
   type: GraphQLSystemSidebarElementType;
 };
 
-export type GraphQLCustomSidebarElement = GraphQLISidebarElement & {
-  __typename?: "CustomSidebarElement";
+export type GraphQLExtensionSidebarElement = GraphQLISidebarElement & {
+  __typename?: "ExtensionSidebarElement";
   id: Scalars["ID"];
   createdAt: Scalars["DateTime"];
   updatedAt: Scalars["DateTime"];
@@ -3996,6 +4258,21 @@ export type GraphQLCustomSidebarElement = GraphQLISidebarElement & {
   isEnabled: Scalars["Boolean"];
   model: GraphQLIModel;
   extension: GraphQLSidebarExtension;
+};
+
+export type GraphQLAppSidebarElement = GraphQLISidebarElement & {
+  __typename?: "AppSidebarElement";
+  id: Scalars["ID"];
+  createdAt: Scalars["DateTime"];
+  updatedAt: Scalars["DateTime"];
+  displayName: Scalars["String"];
+  description?: Maybe<Scalars["String"]>;
+  config?: Maybe<Scalars["JSON"]>;
+  position: Scalars["Int"];
+  isEnabled: Scalars["Boolean"];
+  model: GraphQLIModel;
+  appElement: GraphQLFormSidebarAppElement;
+  appInstallation: GraphQLAppInstallation;
 };
 
 export type GraphQLModel = GraphQLIModel &
@@ -4699,9 +4976,9 @@ export type GraphQLBatchMigrationCreateComponentUnionFieldInput = {
 
 /** reverse field args */
 export type GraphQLBatchMigrationCreateReverseUnionFieldInput = {
-  apiId: Scalars["String"];
+  apiId?: Maybe<Scalars["String"]>;
   modelApiIds: Array<Scalars["String"]>;
-  displayName: Scalars["String"];
+  displayName?: Maybe<Scalars["String"]>;
   description?: Maybe<Scalars["String"]>;
   isList?: Maybe<Scalars["Boolean"]>;
   isHidden?: Maybe<Scalars["Boolean"]>;
@@ -5481,6 +5758,13 @@ export type GraphQLMutation = {
   moveSidebarElement: GraphQLMoveSidebarElementPayload;
   updateSidebarElement: GraphQLUpdateSidebarElementPayload;
   resetSidebarElements: GraphQLResetSidebarElementsPayload;
+  createApp: GraphQLCreateAppPayload;
+  updateApp: GraphQLUpdateAppPayload;
+  /** updateAppElement(data: UpdateAppInput!): UpdateAppPayload! */
+  deleteApp: GraphQLDeleteAppPayload;
+  createAppInstallation: GraphQLCreateAppInstallationPayload;
+  updateAppInstallation: GraphQLUpdateAppInstallationPayload;
+  deleteAppInstallation: GraphQLDeleteAppInstallationPayload;
   createStage: GraphQLAsyncOperationPayload;
   updateStage: GraphQLAsyncOperationPayload;
   deleteStage: GraphQLAsyncOperationPayload;
@@ -5843,6 +6127,30 @@ export type GraphQLMutationUpdateSidebarElementArgs = {
 
 export type GraphQLMutationResetSidebarElementsArgs = {
   data: GraphQLResetSidebarElementsInput;
+};
+
+export type GraphQLMutationCreateAppArgs = {
+  data: GraphQLCreateAppInput;
+};
+
+export type GraphQLMutationUpdateAppArgs = {
+  data: GraphQLUpdateAppInput;
+};
+
+export type GraphQLMutationDeleteAppArgs = {
+  data: GraphQLDeleteAppInput;
+};
+
+export type GraphQLMutationCreateAppInstallationArgs = {
+  data: GraphQLCreateAppInstallationInput;
+};
+
+export type GraphQLMutationUpdateAppInstallationArgs = {
+  data: GraphQLUpdateAppInstallationInput;
+};
+
+export type GraphQLMutationDeleteAppInstallationArgs = {
+  data: GraphQLDeleteAppInstallationInput;
 };
 
 export type GraphQLMutationCreateStageArgs = {

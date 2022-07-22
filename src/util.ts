@@ -1,6 +1,14 @@
 import { GraphQLClient } from "graphql-request/dist";
 import { EnvironmentInfo, MigrationChange, MigrationInfo } from "./migration";
 import { nanoid } from "nanoid";
+import {
+  GraphQLBatchMigrationCreateSimpleFieldInput,
+  GraphQLSimpleFieldType,
+  GraphQLSimpleFieldValidationsInput,
+  GraphQLFieldValidationFloatRangeInput,
+  GraphQLFieldValidationIntRangeInput,
+  GraphQLFieldValidationRegExInput,
+} from "./generated/schema";
 
 // Credit: https://stackoverflow.com/a/54178819/524060
 type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -221,7 +229,71 @@ async function fetchMigration(
   }
 }
 
+interface FieldValidationArgs {
+  range?: GraphQLFieldValidationFloatRangeInput;
+  characters?: GraphQLFieldValidationIntRangeInput;
+  listItemCount?: GraphQLFieldValidationIntRangeInput;
+  matches?: GraphQLFieldValidationRegExInput;
+  notMatches?: GraphQLFieldValidationRegExInput;
+}
+
+interface CreateSimpleFieldArgs
+  extends Omit<
+    GraphQLBatchMigrationCreateSimpleFieldInput,
+    "validations" | "modelApiId" | "isHidden"
+  > {
+  validations?: FieldValidationArgs;
+  /**
+   * @deprecated Use visibility instead.
+   */
+  isHidden?: GraphQLBatchMigrationCreateSimpleFieldInput["isHidden"];
+}
+
+/**
+ * @ignore
+ * @param fieldArgs
+ */
+function extractFieldValidations(
+  fieldArgs: CreateSimpleFieldArgs
+): GraphQLSimpleFieldValidationsInput {
+  const validations: GraphQLSimpleFieldValidationsInput = {};
+  switch (fieldArgs.type) {
+    case GraphQLSimpleFieldType.Int:
+      validations.Int = { range: fieldArgs.validations?.range };
+      if (fieldArgs.isList) {
+        validations.Int.listItemCount = fieldArgs.validations?.listItemCount;
+      }
+      break;
+
+    case GraphQLSimpleFieldType.Float:
+      validations.Float = { range: fieldArgs.validations?.range };
+      if (fieldArgs.isList) {
+        validations.Float.listItemCount = fieldArgs.validations?.listItemCount;
+      }
+      break;
+
+    case GraphQLSimpleFieldType.String:
+      validations.String = {
+        characters: fieldArgs.validations?.characters,
+        matches: fieldArgs.validations?.matches,
+        notMatches: fieldArgs.validations?.notMatches,
+      };
+      if (fieldArgs.isList) {
+        validations.String.listItemCount = fieldArgs.validations?.listItemCount;
+      }
+      break;
+
+    default:
+      throw new Error(`field validations not supported for ${fieldArgs.type}`);
+  }
+
+  return validations;
+}
+
 export {
+  CreateSimpleFieldArgs,
+  FieldValidationArgs,
+  extractFieldValidations,
   PartialBy,
   MutationMode,
   RelationType,

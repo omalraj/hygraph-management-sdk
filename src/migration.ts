@@ -1,5 +1,6 @@
 import { GraphQLClient } from "graphql-request";
 
+import { Component, ComponentClass } from "./component";
 import { Model, ModelClass } from "./model";
 import {
   fetchEnvironment,
@@ -9,6 +10,8 @@ import {
 } from "./util";
 import {
   GraphQLBatchMigrationCreateEnumerationInput,
+  GraphQLBatchMigrationCreateComponentInput,
+  GraphQLBatchMigrationUpdateComponentInput,
   GraphQLBatchMigrationCreateModelInput,
   GraphQLBatchMigrationUpdateModelInput,
   GraphQLBatchMigrationCreateStageInput,
@@ -99,6 +102,30 @@ interface Migration {
    * the migration.
    */
   dryRun(): any;
+
+  /**
+   * Fetch an existing component
+   * @param apiId the `apiId` for the model.
+   */
+  component(apiId: string): Component;
+
+  /**
+   * Create a new component
+   * @param args options for the new component.
+   */
+  createComponent(args: GraphQLBatchMigrationCreateComponentInput): Component;
+
+  /**
+   * Update an existing component
+   * @param args options for component update.
+   */
+  updateComponent(args: GraphQLBatchMigrationUpdateComponentInput): Component;
+
+  /**
+   * Delete a component
+   * @param apiId the `apiId` of the model to delete.
+   */
+  deleteComponent(apiId: string): void;
 
   /**
    * Fetch an existing model
@@ -260,6 +287,29 @@ class MigrationClass implements Migration, ChangeListener {
   model(apiId: string): Model {
     const model = new ModelClass(this, MutationMode.Update, { apiId });
     return model;
+  }
+
+  component(apiId: string): Component {
+    const component = new ComponentClass(this, MutationMode.Update, { apiId });
+    return component;
+  }
+
+  createComponent(args: any): Component {
+    const component = new ComponentClass(this, MutationMode.Create, args);
+    this.registerChange(component);
+    return component;
+  }
+
+  updateComponent(args: any): Component {
+    const component = new ComponentClass(this, MutationMode.Update, args);
+    this.registerChange(component);
+    return component;
+  }
+
+  deleteComponent(apiId: string) {
+    const component = new ComponentClass(this, MutationMode.Delete, { apiId });
+    this.registerChange(component);
+    return component;
   }
 
   createModel(args: any): Model {

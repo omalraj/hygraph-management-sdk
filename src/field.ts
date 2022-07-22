@@ -9,6 +9,10 @@ import {
   GraphQLBatchMigrationUpdateRelationalFieldInput,
   GraphQLBatchMigrationUpdateSimpleFieldInput,
   GraphQLBatchMigrationUpdateUnionFieldInput,
+  GraphQLBatchMigrationCreateComponentFieldInput,
+  GraphQLBatchMigrationUpdateComponentFieldInput,
+  GraphQLBatchMigrationCreateComponentUnionFieldInput,
+  GraphQLBatchMigrationUpdateComponentUnionFieldInput,
 } from "./generated/schema";
 
 export type FieldArgs =
@@ -19,7 +23,11 @@ export type FieldArgs =
   | GraphQLBatchMigrationCreateEnumerableFieldInput
   | GraphQLBatchMigrationCreateUnionFieldInput
   | GraphQLBatchMigrationUpdateUnionFieldInput
-  | GraphQLBatchMigrationCreateRemoteFieldInput;
+  | GraphQLBatchMigrationCreateRemoteFieldInput
+  | GraphQLBatchMigrationCreateComponentFieldInput
+  | GraphQLBatchMigrationUpdateComponentFieldInput
+  | GraphQLBatchMigrationCreateComponentUnionFieldInput
+  | GraphQLBatchMigrationUpdateComponentUnionFieldInput;
 
 enum FieldType {
   SimpleField = 1,
@@ -27,6 +35,8 @@ enum FieldType {
   EnumerableField,
   UnionField,
   RemoteField,
+  ComponentField,
+  ComponentUnionField,
 }
 
 /**
